@@ -53,3 +53,8 @@ const isValid = verifyWebhook(rawBody, signature, timestamp, webhookSecret);
 ## Related Packages
 
 - `@contro1/claude-code` for Claude Code approvals
+
+## Skill
+
+This repo includes an integration skill:
+- `skills/centcom-js-sdk.md`
