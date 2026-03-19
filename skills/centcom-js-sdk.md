@@ -58,6 +58,16 @@ const req = await client.createRequest({
 
 `callback_url` can be omitted for polling-only integrations.
 
+Mini example (role-gated request):
+```ts
+const req = await client.createRequest({
+  type: "approval",
+  question: "Approve DB migration?",
+  context: "Adds index to critical table",
+  required_role: "admin",
+});
+```
+
 ## Step 5: Receive or Poll Decision
 
 Webhook-first:
@@ -94,5 +104,7 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 
 ## Related Skills
 
-- Use `centcom-langgraph` skill for LangGraph-specific pause/resume flow.
-- Use `centcom-claude-code` skill for Claude `PreToolUse` tool approvals.
+- LangGraph workflow skill:
+  `https://github.com/contro1-hq/centcom-langgraph/blob/main/skills/centcom-langgraph.md`
+- Claude connector skill:
+  `https://github.com/contro1-hq/centcom-claude-code/blob/main/skills/centcom-claude-code.md`

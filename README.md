@@ -50,9 +50,17 @@ const isValid = verifyWebhook(rawBody, signature, timestamp, webhookSecret);
 - `verifyWebhook(rawBody, signature, timestamp, secret)`
 - `webhookMiddleware(secret)` for Express
 
+## Quick Verify
+
+```bash
+node -e "import('@contro1/sdk').then(() => console.log('sdk installed'))"
+```
+
 ## Related Packages
 
-- `@contro1/claude-code` for Claude Code approvals
+- [`centcom`](https://github.com/contro1-hq/centcom) for Python backend integrations
+- [`centcom-langgraph`](https://github.com/contro1-hq/centcom-langgraph) for LangGraph workflows
+- [`@contro1/claude-code`](https://github.com/contro1-hq/centcom-claude-code) for Claude Code approvals
 
 ## Skill
 
