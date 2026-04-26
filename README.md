@@ -26,11 +26,20 @@ const req = await client.createRequest({
   context: "Order #123 refund request",
   question: "Approve refund?",
   callback_url: "https://your-app.com/centcom-webhook",
-  priority: "urgent"
+  priority: "urgent",
+  approval_policy: {
+    mode: "threshold",
+    required_approvals: 2,
+    required_roles: ["manager", "admin"],
+    separation_of_duties: true,
+    fail_closed_on_timeout: true
+  }
 });
 
 console.log(req.id, req.state);
 ```
+
+For high-risk actions, callbacks are delivered only after quorum is met, a reviewer rejects, or the request times out. Partial approvals are audit events and do not resume the agent.
 
 ## Webhook Verification
 

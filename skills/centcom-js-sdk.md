@@ -52,11 +52,20 @@ const req = await client.createRequest({
   context: "Release 2026.03.16 includes billing migration.",
   callback_url: "https://your-app.com/centcom-webhook",
   priority: "urgent",
+  approval_policy: {
+    mode: "threshold",
+    required_approvals: 2,
+    required_roles: ["manager", "admin"],
+    separation_of_duties: true,
+    fail_closed_on_timeout: true,
+  },
   metadata: { service: "deploy-bot" },
 });
 ```
 
 `callback_url` can be omitted for polling-only integrations.
+
+For high-risk actions, set `approval_policy.required_approvals = 2`. The first approval records an audit event but does not trigger the callback or polling terminal state; the request resolves only after quorum, rejection, cancellation, or timeout.
 
 Mini example (role-gated request):
 ```ts
@@ -101,6 +110,7 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 - Keep fallback behavior explicit (deny/abort on uncertainty).
 - Redact secrets before logging context or tool input.
 - Never commit API keys in source code.
+- Fail closed if quorum is not reached before timeout for deploys, payments, bulk deletion, or privilege escalation.
 
 ## Related Skills
 
