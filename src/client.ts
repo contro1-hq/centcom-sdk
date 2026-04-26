@@ -1,6 +1,6 @@
 import type { CentcomConfig, CreateRequestParams, CentcomRequest } from "./types.js";
 
-const DEFAULT_BASE_URL = "https://contro1.com/api/centcom/v1";
+const DEFAULT_BASE_URL = "https://api.contro1.com/api/centcom/v1";
 const DEFAULT_TIMEOUT = 30_000;
 
 export class CentcomClient {
