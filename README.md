@@ -75,3 +75,33 @@ node -e "import('@contro1/sdk').then(() => console.log('sdk installed'))"
 
 This repo includes an integration skill:
 - `skills/centcom-js-sdk.md`
+
+## Ask a human
+
+```ts
+const client = new CentcomClient({ apiKey: process.env.CONTRO1_API_KEY! });
+const threadId = client.newThreadId();
+
+const request = await client.createProtocolRequest({
+  title: 'Approve vendor transfer?',
+  request_type: 'approval',
+  source: { integration: 'finance-agent' },
+  continuation: { mode: 'decision', webhook_url: 'https://agent.example.com/webhook' },
+  thread_id: threadId,
+});
+```
+
+## Log an autonomous action
+
+```ts
+await client.logAction({
+  action: 'transfer.executed',
+  summary: 'Transferred $500 to approved vendor account',
+  source: { integration: 'finance-agent' },
+  outcome: 'success',
+  thread_id: threadId,
+  in_reply_to: { type: 'request', id: request.id },
+});
+```
+
+Use `createProtocolRequest` for human review and `logAction` for audit-only records.
