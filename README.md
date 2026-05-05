@@ -75,6 +75,7 @@ node -e "import('@contro1/sdk').then(() => console.log('sdk installed'))"
 
 This repo includes an integration skill:
 - `skills/centcom-js-sdk.md`
+- `skills/contro1-eu-oversight.md`
 
 ## Ask a human
 
