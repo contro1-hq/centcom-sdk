@@ -160,6 +160,8 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
   `https://github.com/contro1-hq/centcom-langgraph/blob/main/skills/centcom-langgraph.md`
 - EU oversight readiness skill:
   `https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-eu-oversight.md`
+- US AI governance readiness skill:
+  `https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-us-ai-governance.md`
 - Claude connector skill:
   `https://github.com/contro1-hq/centcom-claude-code/blob/main/skills/centcom-claude-code.md`
 
@@ -169,6 +171,7 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 - Skill file source: https://github.com/contro1-hq/centcom-sdk/blob/main/skills/centcom-js-sdk.md
 - TypeScript SDK skill: https://github.com/contro1-hq/centcom-sdk/blob/main/skills/centcom-typescript-sdk.md
 - EU oversight skill: https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-eu-oversight.md
+- US AI governance skill: https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-us-ai-governance.md
 - Python SDK repo: https://github.com/contro1-hq/centcom
 - Audit records and threads docs: https://contro1.com/docs/audit-records-and-threads
 - Requests API docs: https://contro1.com/docs/requests-api
