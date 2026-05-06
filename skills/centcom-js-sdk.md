@@ -46,7 +46,7 @@ const client = new CentcomClient({
 ## Step 4: Create Approval Requests
 
 ```ts
-const threadId = client.newThreadId();
+const caseId = `case_deploy_${Date.now()}`;
 
 const req = await client.createRequest({
   type: "approval",
@@ -54,7 +54,7 @@ const req = await client.createRequest({
   context: "Release 2026.03.16 includes billing migration.",
   callback_url: "https://your-app.com/centcom-webhook",
   priority: "urgent",
-  thread_id: threadId,
+  correlation_id: caseId,
   approval_policy: {
     mode: "threshold",
     required_approvals: 2,
@@ -80,26 +80,24 @@ const req = await client.createRequest({
 });
 ```
 
-## Step 4b: Generate a Thread ID
+## Step 4b: Set a Case ID
 
-Use `thread_id` when multiple requests and audit records belong to the same agent run, customer case, or incident.
+Use `correlation_id` as the customer case id when multiple requests and audit records belong to the same run, case, or incident.
 
 ```ts
-const threadId = client.newThreadId();
-
 const req = await client.createProtocolRequest({
   title: "Approve vendor transfer?",
   request_type: "approval",
   source: { integration: "finance-agent", workflow_id: "vendor-payment" },
   continuation: { mode: "decision", webhook_url: "https://your-app.com/centcom-webhook" },
   external_request_id: "vendor-payment:transfer-8842",
-  thread_id: threadId,
+  correlation_id: "case_vendor_payment_8842",
 });
 ```
 
 Rules:
-- Put the same `thread_id` on related requests and audit records.
-- Use `external_request_id` for idempotency. Do not use `thread_id` as an idempotency key.
+- Put the same `correlation_id` on related requests and audit records.
+- Use `external_request_id` for idempotency.
 - Use `in_reply_to` when an audit record follows a specific request.
 
 ## Step 4c: Log Autonomous Actions
@@ -112,7 +110,7 @@ await client.logAction({
   summary: "Transferred $500 to the approved vendor account",
   source: { integration: "finance-agent", workflow_id: "vendor-payment" },
   outcome: "success",
-  thread_id: threadId,
+  correlation_id: "case_vendor_payment_8842",
   in_reply_to: { type: "request", id: req.id },
 });
 ```
@@ -147,7 +145,7 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 ## Safety Checklist
 
 - Use idempotency key for retried request creation.
-- Use thread_id to group related items, not to deduplicate requests.
+- Use correlation_id (case_id) to group related items.
 - Use logAction for allowed autonomous actions that still need audit evidence.
 - Keep fallback behavior explicit (deny/abort on uncertainty).
 - Redact secrets before logging context or tool input.

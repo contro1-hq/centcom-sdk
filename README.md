@@ -41,6 +41,53 @@ console.log(req.id, req.state);
 
 For high-risk actions, callbacks are delivered only after quorum is met, a reviewer rejects, or the request times out. Partial approvals are audit events and do not resume the agent.
 
+## Correlation and Routing
+
+- `external_request_id` = one external action idempotency key.
+- `case_id` (send as `correlation_id`) = broader business case that can contain multiple requests and audit records.
+- `in_reply_to` = direct continuation of a prior request or audit record.
+- `POST /api/centcom/v1/requests/control-map` previews role mapping, fallback reviewers, shift coverage, and policy satisfiability before request creation.
+
+## Customer Agent Plugin Pattern
+
+Build one adapter around the SDK so the customer agent can call a tiny, stable tool surface:
+
+```ts
+type ControlMapCache = { value: unknown; ts: number } | null;
+
+export class Contro1Plugin {
+  private cache: ControlMapCache = null;
+  constructor(private client: CentcomClient) {}
+
+  async previewPolicy(payload: Record<string, unknown>, ttlMs = 5 * 60_000) {
+    if (this.cache && Date.now() - this.cache.ts < ttlMs) return this.cache.value;
+    const value = await this.client.post('/api/centcom/v1/requests/control-map', payload);
+    this.cache = { value, ts: Date.now() };
+    return value;
+  }
+
+  requestHumanReview(input: { title: string; context: string; case_id: string; action_id: string } & Record<string, unknown>) {
+    return this.client.createProtocolRequest({
+      title: input.title,
+      context: input.context,
+      correlation_id: input.case_id,
+      external_request_id: input.action_id,
+      ...input,
+    });
+  }
+
+  logAuditAction(input: { action: string; summary: string; case_id: string; in_reply_to?: { type: 'request' | 'audit_record'; id: string } } & Record<string, unknown>) {
+    return this.client.logAction({
+      action: input.action,
+      summary: input.summary,
+      correlation_id: input.case_id,
+      in_reply_to: input.in_reply_to,
+      ...input,
+    });
+  }
+}
+```
+
 ## Webhook Verification
 
 ```ts
@@ -89,7 +136,8 @@ const request = await client.createProtocolRequest({
   request_type: 'approval',
   source: { integration: 'finance-agent' },
   continuation: { mode: 'decision', webhook_url: 'https://agent.example.com/webhook' },
-  thread_id: threadId,
+  external_request_id: 'payment:run_1024:approve',
+  correlation_id: 'case_payment_run_1024',
 });
 ```
 
@@ -101,7 +149,7 @@ await client.logAction({
   summary: 'Transferred $500 to approved vendor account',
   source: { integration: 'finance-agent' },
   outcome: 'success',
-  thread_id: threadId,
+  correlation_id: 'case_payment_run_1024',
   in_reply_to: { type: 'request', id: request.id },
 });
 ```
