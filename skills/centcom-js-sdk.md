@@ -171,5 +171,5 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 - EU oversight skill: https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-eu-oversight.md
 - US AI governance skill: https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-us-ai-governance.md
 - Python SDK repo: https://github.com/contro1-hq/centcom
-- Audit records and threads docs: https://contro1.com/docs/audit-records-and-threads
+- Audit records and cases docs: https://contro1.com/docs/audit-records-and-cases
 - Requests API docs: https://contro1.com/docs/requests-api
