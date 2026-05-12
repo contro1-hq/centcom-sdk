@@ -2,6 +2,14 @@
 
 Official CENTCOM JavaScript/TypeScript SDK.
 
+## Agent Integration Kit
+
+To save time, give your coding agent this skill. It inspects your system, reports governance gaps, and suggests Contro1 integration (optional):
+
+```
+https://contro1.com/agent-kit
+```
+
 Use this package to:
 - Create human approval requests
 - Query request status
