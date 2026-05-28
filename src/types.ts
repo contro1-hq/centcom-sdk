@@ -6,6 +6,7 @@ export type RequestState =
 export type InteractionType = "yes_no" | "free_text" | "approval";
 export type Priority = "normal" | "urgent";
 export type ApprovalPolicyMode = "single" | "all_of" | "any_of" | "threshold";
+export type RiskLevel = "low" | "medium" | "high" | "critical";
 
 export interface ApprovalPolicy {
   mode?: ApprovalPolicyMode;
@@ -14,6 +15,15 @@ export interface ApprovalPolicy {
   required_department_ids?: string[];
   separation_of_duties?: boolean;
   fail_closed_on_timeout?: boolean;
+}
+
+export interface PolicyContext {
+  source?: string;
+  policy_name?: string;
+  rule_id?: string;
+  rule_reason?: string;
+  policy_version?: string;
+  enforcement?: string;
 }
 
 export interface CentcomConfig {
@@ -33,6 +43,11 @@ export interface CreateRequestParams {
   response_schema?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   sla_minutes?: number;
+  risk_level?: RiskLevel;
+  policy_trigger?: string;
+  policy_context?: PolicyContext;
+  approval_comment_required?: boolean;
+  approval_requirements?: Record<string, unknown>;
   idempotency_key?: string;
 }
 
@@ -52,6 +67,11 @@ export interface CentcomRequest {
   priority: Priority;
   required_role?: string;
   approval_policy?: ApprovalPolicy;
+  risk_level?: RiskLevel;
+  policy_trigger?: string;
+  policy_context?: PolicyContext;
+  approval_comment_required?: boolean;
+  approval_requirements?: Record<string, unknown>;
   approval_records?: Array<{
     operator_id: string;
     operator_name_snapshot?: string;
@@ -65,6 +85,7 @@ export interface CentcomRequest {
   responded_at?: string | null;
   state_history: StateHistoryEntry[];
   metadata?: Record<string, unknown>;
+  protocol_response?: Record<string, unknown>;
   created_at: string;
 }
 
@@ -75,4 +96,9 @@ export interface WebhookPayload {
   responded_by: string | null;
   responded_at: string | null;
   metadata: Record<string, unknown> | null;
+  risk_level?: RiskLevel;
+  policy_trigger?: string;
+  policy_context?: PolicyContext;
+  approval_comment_required?: boolean;
+  protocol_response?: Record<string, unknown>;
 }

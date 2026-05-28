@@ -2,6 +2,30 @@
 
 Use `createProtocolRequest` when the agent must wait for an operator. Use `logAction` when the agent already acted within policy and Contro1 should keep an audit record.
 
+## Policy evidence fields
+
+When the caller already knows why review is required, include the evidence directly in the request. This is not Microsoft-specific; use it with any policy engine, rules service, risk classifier, or application rule.
+
+```ts
+await client.createProtocolRequest({
+  title: 'Approve vendor transfer?',
+  request_type: 'approval',
+  source: { integration: 'finance-agent', workflow_id: 'vendor-payment' },
+  risk_level: 'high',
+  policy_trigger: 'Payments above $10,000 require finance approval.',
+  policy_context: {
+    source: 'custom_rules',
+    policy_name: 'finance-transfer-controls',
+    rule_id: 'payment-over-10000',
+    rule_reason: 'Payments above $10,000 require finance approval.',
+    policy_version: 'git:8f42c1a',
+    enforcement: 'require_approval',
+  },
+  approval_comment_required: true,
+  continuation: { mode: 'decision', webhook_url: 'https://agent.example.com/webhook' },
+});
+```
+
 ## Case continuity rules
 
 - Generate a case id or use a stable existing business case id.

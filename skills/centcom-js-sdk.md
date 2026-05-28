@@ -54,6 +54,17 @@ const req = await client.createRequest({
   context: "Release 2026.03.16 includes billing migration.",
   callback_url: "https://your-app.com/centcom-webhook",
   priority: "urgent",
+  risk_level: "high",
+  policy_trigger: "Production deploys with billing migrations require release manager approval.",
+  policy_context: {
+    source: "custom_rules",
+    policy_name: "production-release-controls",
+    rule_id: "billing-migration-release",
+    rule_reason: "Production deploys with billing migrations require release manager approval.",
+    policy_version: "git:8f42c1a",
+    enforcement: "require_approval",
+  },
+  approval_comment_required: true,
   correlation_id: caseId,
   approval_policy: {
     mode: "threshold",
@@ -146,6 +157,8 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 
 - Use idempotency key for retried request creation.
 - Use correlation_id (case_id) to group related items.
+- Use policy_context when any policy source, rules service, risk classifier, or application rule caused the review.
+- Set approval_comment_required when a reviewer must justify approval even if risk is not high or critical.
 - Use logAction for allowed autonomous actions that still need audit evidence.
 - Keep fallback behavior explicit (deny/abort on uncertainty).
 - Redact secrets before logging context or tool input.
