@@ -169,6 +169,8 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 
 - LangGraph workflow skill:
   `https://github.com/contro1-hq/centcom-langgraph/blob/main/skills/centcom-langgraph.md`
+- Microsoft AGT companion skill:
+  `https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration/blob/main/skills/contro1-microsoft-agent-governance-toolkit-integration.md`
 - EU oversight readiness skill:
   `https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-eu-oversight.md`
 - US AI governance readiness skill:

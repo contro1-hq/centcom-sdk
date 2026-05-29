@@ -146,6 +146,7 @@ node -e "import('@contro1/sdk').then(() => console.log('sdk installed'))"
 
 - [`centcom`](https://github.com/contro1-hq/centcom) for Python backend integrations
 - [`centcom-langgraph`](https://github.com/contro1-hq/centcom-langgraph) for LangGraph workflows
+- [`contro1-microsoft-agent-governance-toolkit-integration`](https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration) for Microsoft AGT `require_approval` policy decisions
 - [`@contro1/claude-code`](https://github.com/contro1-hq/centcom-claude-code) for Claude Code approvals
 
 ## Skill
