@@ -103,7 +103,7 @@ export class Contro1GovernanceTool {
 
   async preview(payload: Record<string, unknown>, ttlMs = 5 * 60_000) {
     if (this.previewCache && Date.now() - this.previewCache.ts < ttlMs) return this.previewCache.value;
-    const value = await this.client.post('/api/centcom/v1/requests/control-map', payload);
+    const value = await this.client.previewControlMap(payload);
     this.previewCache = { value, ts: Date.now() };
     return value;
   }

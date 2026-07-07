@@ -12,7 +12,12 @@ https://contro1.com/agent-kit
 
 Use this package to:
 - Create human approval requests
+- Create canonical protocol requests
+- Record audit-only agent actions
+- Preview Control Map routing
 - Query request status
+- Export request/agent evidence
+- Read thread and trace timelines
 - Cancel pending requests
 - Verify signed webhook callbacks
 
@@ -91,7 +96,7 @@ export class Contro1Plugin {
 
   async previewPolicy(payload: Record<string, unknown>, ttlMs = 5 * 60_000) {
     if (this.cache && Date.now() - this.cache.ts < ttlMs) return this.cache.value;
-    const value = await this.client.post('/api/centcom/v1/requests/control-map', payload);
+    const value = await this.client.previewControlMap(payload);
     this.cache = { value, ts: Date.now() };
     return value;
   }
@@ -99,7 +104,7 @@ export class Contro1Plugin {
   requestHumanReview(input: { title: string; context: string; case_id: string; action_id: string } & Record<string, unknown>) {
     return this.client.createProtocolRequest({
       title: input.title,
-      context: input.context,
+      description: input.context,
       correlation_id: input.case_id,
       external_request_id: input.action_id,
       ...input,
@@ -129,10 +134,28 @@ const isValid = verifyWebhook(rawBody, signature, timestamp, webhookSecret);
 ## API
 
 - `CentcomClient`
+  - `request(method, path, body?, headers?)`
+  - `get(path, query?)`
+  - `post(path, body?, headers?)`
+  - `delete(path, body?, headers?)`
   - `createRequest(params)`
+  - `createProtocolRequest(request)`
+  - `logAction(params)`
+  - `previewControlMap(params)`
+  - `listRequests(params?)`
   - `getRequest(requestId)`
+  - `getProtocolResponse(requestId)`
+  - `getRequestEvidence(requestId)`
+  - `getThread(threadId)`
+  - `getTrace(traceId)`
+  - `registerAgent(params)`
+  - `listAgents(params?)`
+  - `getAgent(agentId)`
+  - `getAgentTrail(agentId, params?)`
+  - `getAgentEvidence(agentId, params?)`
   - `cancelRequest(requestId)`
   - `waitForResponse(requestId, intervalMs?, timeoutMs?)`
+  - `waitForProtocolResponse(requestId, intervalMs?, timeoutMs?)`
 - `verifyWebhook(rawBody, signature, timestamp, secret)`
 - `webhookMiddleware(secret)` for Express
 
@@ -164,6 +187,7 @@ const threadId = client.newThreadId();
 
 const request = await client.createProtocolRequest({
   title: 'Approve vendor transfer?',
+  description: 'Payment run 1024 wants to transfer funds to a vendor.',
   request_type: 'approval',
   source: { integration: 'finance-agent' },
   risk_level: 'high',

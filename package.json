@@ -1,6 +1,6 @@
 {
   "name": "@contro1/sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CENTCOM JavaScript/TypeScript SDK for requests and webhook verification",
   "type": "module",
   "main": "dist/index.js",
