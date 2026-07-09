@@ -143,6 +143,7 @@ export interface RoutingCoverageEvent {
   status: 'primary_available' | 'fallback_active' | 'admin_fallback_required' | 'unmapped' | 'capacity_missing';
   intended_operator_ids?: string[];
   intended_operator_names?: string[];
+  // Explicit reviewer ids used for configured fallbacks or manual routing targets.
   fallback_operator_ids?: string[];
   fallback_operator_names?: string[];
   resolved_operator_ids?: string[];
