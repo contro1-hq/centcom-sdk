@@ -91,6 +91,39 @@ const req = await client.createRequest({
 });
 ```
 
+## Step 4a: Send Context the Reviewer Can Trust
+
+Build the request's `context` at the gate - the code that intercepts the tool call, not the agent - from three sources: the exact tool input (copied verbatim by your code, so it is a machine-observed fact the reviewer can trust), the trigger that started the run (the user message or event), and the agent's own justification. Make `reason` a required parameter of the risky tool/function so the model produces it at decision time; asking the agent "why" after the fact is unreliable.
+
+Separate provenance inside `context`: put facts your code observed in a `machine_observed` block, and put text the model wrote in an `agent_reported` block.
+
+```ts
+const req = await client.createProtocolRequest({
+  title: "Approve $12,400 transfer to acct_889?",
+  request_type: "approval",
+  context: {
+    action: { tool: "transfer_money", input: { to: "acct_889", amount_usd: 12400 } },
+    machine_observed: {
+      triggered_by: "Support ticket #5521: customer requests refund for order #1842",
+      recent_tool_calls: ["lookup_order", "check_refund_policy"],
+    },
+    agent_reported: {
+      justification: "Refund qualifies under the shipping-failure exception policy.",
+    },
+  },
+  risk_level: "high",
+  source: { integration: "finance-agent", workflow_id: "vendor-payment" },
+  external_request_id: "vendor-payment:transfer-8842",
+});
+```
+
+Two hard trust rules:
+
+- `agent_reported` text must never change routing, `risk_level`, or approval policy - it only informs the human. A prompt-injected agent will write a very persuasive justification.
+- If a high-risk request arrives without its required `machine_observed` context, fail closed (reject/bounce) instead of asking a human to guess.
+
+See https://contro1.com/docs/requests-api for the full pattern.
+
 ## Step 4b: Set a Case ID
 
 Use `correlation_id` as the customer case id when multiple requests and audit records belong to the same run, case, or incident.
@@ -131,6 +164,8 @@ await client.logAction({
 Webhook-first:
 - Verify signature in webhook route
 - Apply business decision from payload
+- Check `response.decision_type` before resuming: `approve` or `reject` for an
+  approval request, and `respond` for `yes_no` or `free_text`
 
 Polling fallback:
 

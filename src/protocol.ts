@@ -89,6 +89,9 @@ export type Contro1Request = {
     resource?: string;
     environment?: string;
     summary?: string;
+    action?: { tool: string; input?: unknown };
+    machine_observed?: Record<string, unknown>;
+    agent_reported?: Record<string, unknown>;
   };
   continuation: {
     mode: Contro1ContinuationMode;
@@ -117,6 +120,7 @@ export type Contro1Response = {
   };
   message?: string;
   structured_response?: Record<string, unknown>;
+  decision_type?: 'approve' | 'reject' | 'respond';
   resolved_at: string;
 };
 
@@ -339,6 +343,14 @@ export function fromLegacyRequest(request: CentcomRequest): Contro1Response {
   const response = (request.response || null) as Record<string, unknown> | null;
   const metadata = (request.metadata || {}) as Record<string, unknown>;
   const operator = (response?.operator || metadata.operator) as Record<string, unknown> | undefined;
+  const canonicalDecision = response?.decision_type;
+  const decisionType = canonicalDecision === 'approve' || canonicalDecision === 'reject' || canonicalDecision === 'respond'
+    ? canonicalDecision
+    : request.type === 'approval' && typeof response?.approved === 'boolean'
+      ? (response.approved ? 'approve' : 'reject')
+      : response
+        ? 'respond'
+        : undefined;
 
   return {
     request_id: request.id,
@@ -350,6 +362,7 @@ export function fromLegacyRequest(request: CentcomRequest): Contro1Response {
     } : (request.responded_by ? { name: request.responded_by } : undefined),
     message: readMessageFromResponse(response),
     structured_response: response || undefined,
+    decision_type: decisionType,
     resolved_at: request.responded_at || request.created_at,
   };
 }

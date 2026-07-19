@@ -13,7 +13,6 @@ import type {
 } from "./types.js";
 import {
   fromLegacyRequest,
-  toLegacyCreateRequestParams,
   validateContro1Request,
   type Contro1Request,
   type Contro1Response,
@@ -133,7 +132,10 @@ export class CentcomClient {
     if (!validation.valid) {
       throw new Error(`Invalid Contro1Request: ${validation.errors.join("; ")}`);
     }
-    return this.createRequest(toLegacyCreateRequestParams(request));
+    const headers: Record<string, string> = {};
+    const idempotencyKey = request.external_request_id || request.correlation_id || request.source.run_id;
+    if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+    return this.post<CentcomRequest>("/requests", request, headers);
   }
 
   async listRequests(params?: ListRequestsParams): Promise<{ requests: CentcomRequest[] }> {
@@ -158,9 +160,7 @@ export class CentcomClient {
   }
 
   async previewControlMap(params: CreateRequestParams | Contro1Request): Promise<Record<string, unknown>> {
-    const looksProtocol = "request_type" in params || "source" in params || "continuation" in params;
-    const body = looksProtocol ? toLegacyCreateRequestParams(params as Contro1Request) : params;
-    const { idempotency_key, ...payload } = body as CreateRequestParams;
+    const { idempotency_key, ...payload } = params as CreateRequestParams;
     return this.post<Record<string, unknown>>("/requests/control-map", payload);
   }
 

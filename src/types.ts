@@ -225,6 +225,8 @@ export interface CentcomRequest {
   policy_trigger?: string | null;
   policy_context?: PolicyContext | null;
   approval_comment_required?: boolean;
+  decision_comment_policy?: 'optional' | 'risk_based' | 'always';
+  allowed_decisions?: Array<'approve' | 'reject' | 'respond'>;
   decision_context?: DecisionContext | null;
   protocol_response?: Record<string, unknown>;
   created_at: string;
@@ -241,6 +243,8 @@ export interface WebhookPayload {
   policy_trigger?: string | null;
   policy_context?: PolicyContext | null;
   approval_comment_required?: boolean;
+  decision_comment_policy?: 'optional' | 'risk_based' | 'always';
+  allowed_decisions?: Array<'approve' | 'reject' | 'respond'>;
   decision_context?: DecisionContext | null;
   protocol_response?: Record<string, unknown>;
 }
