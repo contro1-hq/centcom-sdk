@@ -10,8 +10,12 @@ export type QueryValue = string | number | boolean | Array<string | number | boo
 export type QueryParams = Record<string, QueryValue>;
 
 export interface CentcomConfig {
-  /** API key (cc_live_xxx or cc_test_xxx) */
-  apiKey: string;
+  /** API key (cc_live_xxx or cc_test_xxx). Exactly one of apiKey, tokenProvider or transport. */
+  apiKey?: string;
+  /** An owner-approved runtime connection held by this process (DPoP). */
+  tokenProvider?: import("./runtime/tokenProvider.js").RuntimeTokenProvider;
+  /** This agent's endpoint on the local Contro1 service; the service holds the credential. */
+  transport?: import("./runtime/brokerTransport.js").Transport;
   /** Base URL, defaults to https://api.contro1.com/api/centcom/v1 */
   baseUrl?: string;
   /** Request timeout in ms, defaults to 30000 */
@@ -225,8 +229,6 @@ export interface CentcomRequest {
   policy_trigger?: string | null;
   policy_context?: PolicyContext | null;
   approval_comment_required?: boolean;
-  decision_comment_policy?: 'optional' | 'risk_based' | 'always';
-  allowed_decisions?: Array<'approve' | 'reject' | 'respond'>;
   decision_context?: DecisionContext | null;
   protocol_response?: Record<string, unknown>;
   created_at: string;
@@ -243,8 +245,6 @@ export interface WebhookPayload {
   policy_trigger?: string | null;
   policy_context?: PolicyContext | null;
   approval_comment_required?: boolean;
-  decision_comment_policy?: 'optional' | 'risk_based' | 'always';
-  allowed_decisions?: Array<'approve' | 'reject' | 'respond'>;
   decision_context?: DecisionContext | null;
   protocol_response?: Record<string, unknown>;
 }

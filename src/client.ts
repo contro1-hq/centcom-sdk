@@ -13,6 +13,7 @@ import type {
 } from "./types.js";
 import {
   fromLegacyRequest,
+  toLegacyCreateRequestParams,
   validateContro1Request,
   type Contro1Request,
   type Contro1Response,
@@ -47,13 +48,19 @@ function withQuery(path: string, query?: QueryParams): string {
 }
 
 export class CentcomClient {
-  private apiKey: string;
+  private apiKey?: string;
   private baseUrl: string;
   private timeout: number;
+  private tokenProvider?: CentcomConfig["tokenProvider"];
+  private transport?: CentcomConfig["transport"];
 
   constructor(config: CentcomConfig) {
-    if (!config.apiKey) throw new Error("apiKey is required");
+    const configured = [config.apiKey, config.tokenProvider, config.transport].filter(Boolean).length;
+    if (configured === 0) throw new Error("apiKey is required (or tokenProvider, or transport)");
+    if (configured > 1) throw new Error("configure exactly one of apiKey, tokenProvider or transport: one client, one identity");
     this.apiKey = config.apiKey;
+    this.tokenProvider = config.tokenProvider;
+    this.transport = config.transport;
     this.baseUrl = (config.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, "");
     this.timeout = config.timeout || DEFAULT_TIMEOUT;
   }
@@ -64,6 +71,8 @@ export class CentcomClient {
     body?: unknown,
     headers?: Record<string, string>,
   ): Promise<T> {
+    if (this.transport) return this.requestViaTransport<T>(method, path, body, headers);
+    if (this.tokenProvider) return this.requestWithDpop<T>(method, path, body, headers);
     const url = `${this.baseUrl}${path}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
@@ -101,6 +110,58 @@ export class CentcomClient {
     }
   }
 
+  private static fail(status: number, data: unknown): never {
+    const record = data && typeof data === "object" ? (data as Record<string, any>) : undefined;
+    const message = record?.message ?? record?.error?.message ?? `HTTP ${status}`;
+    const err = new Error(String(message));
+    (err as Error & { status?: number; response?: unknown; remediation?: unknown }).status = status;
+    (err as Error & { status?: number; response?: unknown; remediation?: unknown }).response = data;
+    (err as Error & { status?: number; response?: unknown; remediation?: unknown }).remediation = record?.error?.remediation ?? record?.remediation;
+    throw err;
+  }
+
+  private async requestViaTransport<T>(method: string, path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
+    const url = new URL(`${this.baseUrl}${path}`);
+    const res = await this.transport!(method, `${url.pathname}${url.search}`, { "content-type": "application/json", accept: "application/json", ...headers }, body ? JSON.stringify(body) : undefined);
+    const data = res.body ? (() => { try { return JSON.parse(res.body); } catch { return res.body; } })() : null;
+    if (res.status < 200 || res.status >= 300) CentcomClient.fail(res.status, data);
+    return data as T;
+  }
+
+  private async requestWithDpop<T>(method: string, path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeout);
+      try {
+        const auth = await this.tokenProvider!.authorize(method, url, "api");
+        const res = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json", ...headers, ...auth },
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal,
+        });
+        this.tokenProvider!.observeNonce(res.headers);
+        const contentType = res.headers.get("content-type") || "";
+        const data = contentType.includes("application/json") ? await res.json() : await res.text();
+        if (res.status === 401 && attempt < 2) {
+          const challenge = res.headers.get("www-authenticate") || "";
+          if (challenge.includes("use_dpop_nonce")) continue;
+          const hasRemediation = Boolean((data as any)?.error?.remediation);
+          if (challenge.includes("invalid_token") && attempt === 0 && !hasRemediation) {
+            this.tokenProvider!.invalidate("api");
+            continue;
+          }
+        }
+        if (!res.ok) CentcomClient.fail(res.status, data);
+        return data as T;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    throw new Error("Contro1 kept refusing the runtime credential");
+  }
+
   async get<T>(path: string, query?: QueryParams): Promise<T> {
     return this.request<T>("GET", withQuery(path, query));
   }
@@ -132,10 +193,7 @@ export class CentcomClient {
     if (!validation.valid) {
       throw new Error(`Invalid Contro1Request: ${validation.errors.join("; ")}`);
     }
-    const headers: Record<string, string> = {};
-    const idempotencyKey = request.external_request_id || request.correlation_id || request.source.run_id;
-    if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
-    return this.post<CentcomRequest>("/requests", request, headers);
+    return this.createRequest(toLegacyCreateRequestParams(request));
   }
 
   async listRequests(params?: ListRequestsParams): Promise<{ requests: CentcomRequest[] }> {
@@ -160,7 +218,9 @@ export class CentcomClient {
   }
 
   async previewControlMap(params: CreateRequestParams | Contro1Request): Promise<Record<string, unknown>> {
-    const { idempotency_key, ...payload } = params as CreateRequestParams;
+    const looksProtocol = "request_type" in params || "source" in params || "continuation" in params;
+    const body = looksProtocol ? toLegacyCreateRequestParams(params as Contro1Request) : params;
+    const { idempotency_key, ...payload } = body as CreateRequestParams;
     return this.post<Record<string, unknown>>("/requests/control-map", payload);
   }
 
