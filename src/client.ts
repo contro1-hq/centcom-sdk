@@ -53,6 +53,8 @@ export class CentcomClient {
   private timeout: number;
   private tokenProvider?: CentcomConfig["tokenProvider"];
   private transport?: CentcomConfig["transport"];
+  private reach?: CentcomConfig["reach"];
+  private reachDeclared = false;
 
   constructor(config: CentcomConfig) {
     const configured = [config.apiKey, config.tokenProvider, config.transport].filter(Boolean).length;
@@ -63,6 +65,32 @@ export class CentcomClient {
     this.transport = config.transport;
     this.baseUrl = (config.baseUrl || DEFAULT_BASE_URL).replace(/\/$/, "");
     this.timeout = config.timeout || DEFAULT_TIMEOUT;
+    this.reach = config.reach;
+  }
+
+  /**
+   * Tell Contro1 how exposed this agent is.
+   *
+   * Called once automatically on the first request when `reach` is configured,
+   * so nobody has to remember it. Safe to call again; it overwrites.
+   *
+   * A failure here never fails the caller's work. The declaration only makes
+   * this agent stricter, so losing it leaves the agent exactly as governed as
+   * it was before, and taking somebody's request down to record a safety note
+   * would be the wrong trade.
+   */
+  async declareReach(reach: NonNullable<CentcomConfig["reach"]>): Promise<void> {
+    await this.request("POST", "/runtime/reach", reach);
+  }
+
+  private async declareReachOnce(): Promise<void> {
+    if (!this.reach || this.reachDeclared) return;
+    this.reachDeclared = true;
+    try {
+      await this.declareReach(this.reach);
+    } catch {
+      // Deliberately swallowed. See declareReach.
+    }
   }
 
   async request<T>(
@@ -71,6 +99,12 @@ export class CentcomClient {
     body?: unknown,
     headers?: Record<string, string>,
   ): Promise<T> {
+    // Declared before the first real call, so the server knows how exposed this
+    // agent is before it is asked to do anything. Guarded against itself so the
+    // declaration does not recurse into this method forever.
+    if (this.reach && !this.reachDeclared && path !== "/runtime/reach") {
+      await this.declareReachOnce();
+    }
     if (this.transport) return this.requestViaTransport<T>(method, path, body, headers);
     if (this.tokenProvider) return this.requestWithDpop<T>(method, path, body, headers);
     const url = `${this.baseUrl}${path}`;

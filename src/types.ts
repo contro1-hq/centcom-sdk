@@ -20,6 +20,38 @@ export interface CentcomConfig {
   baseUrl?: string;
   /** Request timeout in ms, defaults to 30000 */
   timeout?: number;
+  /**
+   * Who is able to instruct this agent.
+   *
+   * An agent running in your own backend has no adapter Contro1 can ask. A
+   * scheduled job that only you trigger and a service answering thousands of
+   * customers through an API look identical from here, and they are very
+   * different things to hand a mailbox to. You know which one this is.
+   *
+   * Declaring `shared` stops this agent using anybody's personal account
+   * unless its owner allows that by name, which is the point: on a surface
+   * several people can reach, the agent cannot tell its owner from anyone
+   * else, because it acts with its own authority either way.
+   *
+   * It can only ever make things stricter. A declaration arrives on this
+   * agent's own credential, so claiming to be private would let any agent
+   * unlock personal accounts by saying so; the server refuses that and says
+   * why. Privacy is established by a person, with `contro1 connect`, on a
+   * machine they control.
+   */
+  reach?: AgentReachDeclaration;
+}
+
+export interface AgentReachDeclaration {
+  contexts: Array<{
+    /** Stable and yours: a queue name, a tenant id, a service name. */
+    context_id: string;
+    /** Shown to whoever reviews this agent's access. */
+    label?: string;
+    kind: "shared" | "unknown";
+    /** True only when the people who can reach it are an enumerated list. */
+    participants_known?: boolean;
+  }>;
 }
 
 export interface CreateRequestParams {
