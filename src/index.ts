@@ -9,7 +9,13 @@ export { brokerTransport, socketPathFor } from './runtime/brokerTransport.js';
 export type { Transport, TransportResponse } from './runtime/brokerTransport.js';
 export { registerKeyWithTicket, waitForApproval, exchangeWorkloadToken } from './runtime/enrollment.js';
 export type { DeviceAuthorization } from './runtime/enrollment.js';
-export { ActionsApi, ACTION_TERMINAL_STATES, needsHumanResolution, didExecute } from './actions.js';
+export {
+  ActionsApi,
+  ActionResultUnavailableError,
+  ACTION_TERMINAL_STATES,
+  needsHumanResolution,
+  didExecute,
+} from './actions.js';
 export { verifyWebhook, webhookMiddleware } from './webhook.js';
 export {
   CONTRO1_CONTINUATION_MODES,

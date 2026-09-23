@@ -27,6 +27,33 @@ Use this package to:
 npm install @contro1/sdk
 ```
 
+## Run an Action
+
+Contro1 holds the application account and makes the call; your agent asks for an Action and gets back what it produced. Authenticate with an **Agent Credential** (Settings, API keys, Create Agent Credential): a key bound to one agent. The agent can only run Actions somebody granted it under Access. Full guide: [Connect an agent](https://contro1.com/docs/connect-an-agent).
+
+```ts
+import { CentcomClient, ActionsApi, needsHumanResolution } from "@contro1/sdk";
+
+const actions = new ActionsApi(new CentcomClient({ apiKey: process.env.CONTRO1_API_KEY! }));
+
+const out = await actions.invoke({
+  action_id: "gmail.message.list",
+  input: { max_results: 5 },
+  authority_mode: "agent_principal",   // the agent acts as itself
+  account_mode: "shared",              // the account it was granted
+  idempotency_key: crypto.randomUUID(), // required for side effects; never derived from the payload
+});
+let messages: unknown;
+if (out.invocation.state === "executed") {
+  messages = out.result;
+} else if (out.invocation.state === "awaiting_approval") {        // a person decides first
+  const settled = await actions.waitForInvocation(out.invocation.invocation_id); // re-reads, never re-submits
+  if (needsHumanResolution(settled)) throw new Error("Outcome unknown: a person must check. Do not retry.");
+  messages = await actions.getResult(settled.invocation_id);
+}
+```
+
+On a person's own account (their Gmail), call with `authority_mode: "user_delegated"`, `acting_user_id` set to that person and `account_mode: "personal"`. It works when that person delegated the Action to this agent.
 ## Quick Start
 
 ```ts

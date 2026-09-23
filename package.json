@@ -1,6 +1,6 @@
 {
   "name": "@contro1/sdk",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "CENTCOM SDK - Human Approval Layer for Production AI Workflows",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

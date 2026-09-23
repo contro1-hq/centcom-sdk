@@ -57,9 +57,10 @@ export interface InvokeActionParams {
   input: Record<string, unknown>;
   /**
    * `agent_principal`: the agent acts as itself, with no acting user.
-   * `user_delegated`: the call is made for a person, and the credential used
-   * must be that person's own - the Gateway refuses a delegated call made on
-   * someone else's behalf.
+   * `user_delegated`: the call is made for the person named in
+   * `acting_user_id`. Accepted from that person's own credential, or from an
+   * agent the person delegated this Action to (`whoami` lists them under
+   * `acts_for`). A personal account always needs this.
    */
   authority_mode: AuthorityMode;
   account_mode: ActionAccountMode;
@@ -108,6 +109,25 @@ export interface InvokeActionResult {
   /** True when an existing invocation was returned for a repeated key. */
   reused: boolean;
   invocation: ActionInvocation;
+  /** What the Action produced, when it ran inline during this call. */
+  result?: unknown;
+  /** Why there is no result yet, for example that it is awaiting approval. */
+  result_unavailable?: string;
+  /** Accepted and recorded, but the inline attempt did not run. Read it again later. */
+  not_run?: { code: string; message: string };
+}
+
+/**
+ * The invocation has no result to read, and `reason` says why.
+ *
+ * Not a failure of the Action: an expired or unreadable result belongs to an
+ * Action that ran and succeeded. Do not resubmit to get it back.
+ */
+export class ActionResultUnavailableError extends Error {
+  constructor(readonly invocationId: string, readonly reason: string) {
+    super(`No result for invocation ${invocationId}: ${reason}`);
+    this.name = "ActionResultUnavailableError";
+  }
 }
 
 
@@ -180,6 +200,25 @@ export class ActionsApi {
       `/actions/${encodeURIComponent(invocationId)}`,
     );
     return response.invocation;
+  }
+
+  /**
+   * What the Action produced, for example the messages a list returned.
+   *
+   * Only for the agent this client is authenticated as, and only once the
+   * invocation is `executed`. Throws `ActionResultUnavailableError` with the
+   * server's reason otherwise: "not run yet", "expired" and "cannot be read"
+   * each lead somewhere different, and none is a reason to run it again.
+   */
+  async getResult<T = unknown>(invocationId: string): Promise<T> {
+    const response = await this.client.get<{ ok: true; result?: T; result_unavailable?: string }>(
+      `/actions/${encodeURIComponent(invocationId)}`,
+    );
+    if ("result" in response) return response.result as T;
+    throw new ActionResultUnavailableError(
+      invocationId,
+      response.result_unavailable ?? "No result was returned for this invocation.",
+    );
   }
 
   async cancel(invocationId: string): Promise<ActionInvocation> {
