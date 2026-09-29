@@ -155,3 +155,44 @@ export class TraceRun {
     };
   }
 }
+
+type ExecutableTool = { id?: string; execute?: (...args: any[]) => unknown };
+
+/**
+ * Report every call of every tool in a Mastra (or Vercel AI SDK) tool map.
+ *
+ *     const tools = traceTools(run, { listRecentEmails, issueRefund });
+ *     const agent = new Agent({ name: "billing", model, tools });
+ *
+ * Each tool's `execute` is replaced on a copy, so the originals are untouched.
+ * The input is the first argument (Mastra 1.x, AI SDK) or its `context`
+ * (older Mastra). With `failClosed` on the run, a tool whose start Contro1
+ * could not record does not run: the call rejects with TraceReportError.
+ */
+export function traceTools<T extends Record<string, ExecutableTool>>(run: TraceRun, tools: T): T {
+  const traced: Record<string, ExecutableTool> = {};
+  for (const [key, tool] of Object.entries(tools)) {
+    const execute = tool?.execute;
+    if (typeof execute !== "function") {
+      traced[key] = tool;
+      continue;
+    }
+    const name = typeof tool.id === "string" && tool.id ? tool.id : key;
+    const copy = Object.assign(Object.create(Object.getPrototypeOf(tool)), tool) as ExecutableTool;
+    copy.execute = async (...args: unknown[]) => {
+      const first = args[0] as { context?: unknown } | undefined;
+      const input = first && typeof first === "object" && first.context && typeof first.context === "object" ? first.context : first;
+      const started = await run.toolStarted(name, input);
+      try {
+        const output = await execute.apply(tool, args);
+        await run.toolFinished(name, { output, started });
+        return output;
+      } catch (error) {
+        await run.toolFinished(name, { error, started });
+        throw error;
+      }
+    };
+    traced[key] = copy;
+  }
+  return traced as T;
+}

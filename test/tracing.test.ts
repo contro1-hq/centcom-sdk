@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { CentcomClient } from "../src/client.js";
 import { ActionsApi } from "../src/actions.js";
-import { TraceRun, TraceReportError, newTraceId } from "../src/tracing.js";
+import { TraceRun, TraceReportError, newTraceId, traceTools } from "../src/tracing.js";
 
 /**
  * Traces reported from the runtime, and sub-agents:
@@ -86,6 +86,35 @@ test("failing closed stops the tool; failing open runs it", async () => {
     const read = (n: number): void => { ran.push(n); };
     await new TraceRun(client(), { failClosed: false }).wrap("read", read)(1);
     assert.deepEqual(ran, [1]);
+  } finally {
+    server.restore();
+  }
+});
+
+test("traceTools reports each Mastra tool call and leaves the originals alone", async () => {
+  const server = fakeServer();
+  try {
+    const run = new TraceRun(client(), { source: "mastra" });
+    const original = { id: "issue-refund", description: "d", execute: async ({ context }: { context: { amount: number } }) => `refunded ${context.amount}` };
+    const tools = traceTools(run, { issueRefund: original });
+    assert.equal(await tools.issueRefund.execute!({ context: { amount: 240 } }), "refunded 240");
+    assert.notEqual(tools.issueRefund, original);
+    assert.deepEqual(server.seen.map((s) => s.body.action), ["tool.issue-refund.started", "tool.issue-refund.finished"]);
+    const started = (server.seen[0]!.body.tool_calls as Array<Record<string, unknown>>)[0]!;
+    assert.deepEqual(started.input, { amount: 240 });
+  } finally {
+    server.restore();
+  }
+});
+
+test("traceTools fails closed: the tool does not run", async () => {
+  const server = fakeServer({ down: true });
+  try {
+    let ran = false;
+    const run = new TraceRun(client(), { failClosed: true });
+    const tools = traceTools(run, { refund: { execute: async (input: unknown) => { ran = true; return input; } } });
+    await assert.rejects(() => Promise.resolve(tools.refund.execute!({ amount: 1 })), TraceReportError);
+    assert.equal(ran, false);
   } finally {
     server.restore();
   }

@@ -341,4 +341,12 @@ const lookupOrder = run.wrap('lookup_order', rawLookupOrder); // start and end r
 const writer = run.subAgent('writer');                          // a part, as a child run
 ```
 
+A Mastra agent (or a Vercel AI SDK tool map) reports every tool with one line (1.7.0):
+
+```ts
+import { traceTools } from '@contro1/sdk';
+
+const agent = new Agent({ name: 'billing', model, instructions, tools: traceTools(run, { lookupOrder, issueRefund }) });
+```
+
 `failClosed: true` means a tool whose start Contro1 could not record does not run. Full guide: https://contro1.com/docs/agent-traceability-and-evidence
