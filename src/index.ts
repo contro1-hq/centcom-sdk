@@ -17,6 +17,8 @@ export {
   didExecute,
 } from './actions.js';
 export { verifyWebhook, webhookMiddleware } from './webhook.js';
+export { TraceRun, TraceReportError, newTraceId } from './tracing.js';
+export type { TraceRunOptions } from './tracing.js';
 export {
   CONTRO1_CONTINUATION_MODES,
   CONTRO1_PRIORITIES,

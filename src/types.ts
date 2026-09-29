@@ -312,6 +312,12 @@ export interface AgentRegisterParams {
   framework?: string;
   description?: string;
   owner?: string;
+  /**
+   * The agent this one belongs to, when it is a separate program another agent
+   * starts. It gets its own credential and grants and inherits nothing; for a
+   * part in the same process use `client.asSubAgent(name)` instead.
+   */
+  parent_agent_id?: string;
 }
 
 export interface AgentListParams extends QueryParams {

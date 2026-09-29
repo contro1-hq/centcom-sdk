@@ -318,3 +318,27 @@ await client.logAction({
 ```
 
 Use `createProtocolRequest` for human review and `logAction` for audit-only records.
+
+## Sub-agents and traces (1.6.0)
+
+A multi-agent system that runs in one process with one credential connects once. Each part says who it is:
+
+```ts
+import { CentcomClient, ActionsApi, TraceRun } from '@contro1/sdk';
+
+const researcher = client.asSubAgent('researcher'); // sends Contro1-Sub-Agent: researcher
+await researcher.logAction({ action: 'tool.search', summary: 'Searched the KB', source: { integration: 'mastra' } });
+await new ActionsApi(researcher).invoke({ /* runs on this agent's grants */ });
+```
+
+Contro1 registers the part under this agent the first time it is seen. It never has more authority than this agent.
+
+Report every tool call from the code around the model, with one trace id per run:
+
+```ts
+const run = new TraceRun(client, { source: 'mastra', failClosed: true });
+const lookupOrder = run.wrap('lookup_order', rawLookupOrder); // start and end reported
+const writer = run.subAgent('writer');                          // a part, as a child run
+```
+
+`failClosed: true` means a tool whose start Contro1 could not record does not run. Full guide: https://contro1.com/docs/agent-traceability-and-evidence

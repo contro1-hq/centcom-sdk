@@ -55,6 +55,10 @@ export class CentcomClient {
   private transport?: CentcomConfig["transport"];
   private reach?: CentcomConfig["reach"];
   private reachDeclared = false;
+  /** Headers every call from this view carries (asSubAgent). */
+  private extraHeaders: Record<string, string> = {};
+  /** Set on a view made by asSubAgent: the named part of the agent it acts as. */
+  subAgent?: string;
 
   constructor(config: CentcomConfig) {
     const configured = [config.apiKey, config.tokenProvider, config.transport].filter(Boolean).length;
@@ -79,6 +83,29 @@ export class CentcomClient {
    * it was before, and taking somebody's request down to record a safety note
    * would be the wrong trade.
    */
+  /**
+   * The same agent, acting as one named part of it.
+   *
+   * For a multi-agent system in one process with one credential: a supervisor
+   * and its workers, a crew, a graph of agents. Contro1 registers the part
+   * under this agent the first time it is seen - no setup, no second key:
+   *
+   *   const researcher = client.asSubAgent("researcher");
+   *   await researcher.logAction({ ... });                          // recorded as the researcher
+   *   await new ActionsApi(researcher).invoke({ ... });             // runs on this agent's grants
+   *
+   * A part never has more authority than this agent, and blocking this agent
+   * blocks every part of it.
+   */
+  asSubAgent(name: string): CentcomClient {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length > 64) throw new Error("a sub-agent name is 1-64 characters");
+    const view = Object.assign(Object.create(Object.getPrototypeOf(this)) as CentcomClient, this);
+    view.extraHeaders = { ...this.extraHeaders, "Contro1-Sub-Agent": trimmed };
+    view.subAgent = trimmed;
+    return view;
+  }
+
   async declareReach(reach: NonNullable<CentcomConfig["reach"]>): Promise<void> {
     await this.request("POST", "/runtime/reach", reach);
   }
@@ -105,6 +132,7 @@ export class CentcomClient {
     if (this.reach && !this.reachDeclared && path !== "/runtime/reach") {
       await this.declareReachOnce();
     }
+    headers = { ...this.extraHeaders, ...headers };
     if (this.transport) return this.requestViaTransport<T>(method, path, body, headers);
     if (this.tokenProvider) return this.requestWithDpop<T>(method, path, body, headers);
     const url = `${this.baseUrl}${path}`;

@@ -223,3 +223,12 @@ app.post("/centcom-webhook", webhookMiddleware(process.env.CENTCOM_WEBHOOK_SECRE
 - Python SDK repo: https://github.com/contro1-hq/centcom
 - Audit records and cases docs: https://contro1.com/docs/audit-records-and-cases
 - Requests API docs: https://contro1.com/docs/requests-api
+
+## Sub-agents and traces (SDK 1.6.0)
+
+Rules for a coding agent wiring a multi-agent system:
+
+- Connect the system once, as one agent. For each part in the same process, use `client.asSubAgent("<name>")`. It sends `Contro1-Sub-Agent`; Contro1 registers the part under the agent and it never has more authority than the agent. Never send another `actor.agent_id`: it is refused with `agent_identity_mismatch`.
+- A part that runs as a separate program gets its own credential and is linked with `registerAgent({ ..., parent_agent_id })` or `contro1 init --parent <agent_id>`.
+- Report every tool call from the runtime with `TraceRun` (`run.wrap(name, fn)`, `run.subAgent(name)`), one `trace_id` per run. Use `failClosed: true` for tools that change something.
+- Guide: https://contro1.com/docs/agent-traceability-and-evidence
